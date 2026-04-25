@@ -1,147 +1,135 @@
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Upload, FileText, BookOpen, ShieldCheck } from "lucide-react";
-import { getUploads } from "../api/uploads";
-import { getTemplates } from "../api/templates";
-import { getReports } from "../api/reports";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import { Badge } from "../components/ui/badge";
+import { useWorkspaceStore } from "../store/workspaceStore";
+
+const workflowSteps = [
+  {
+    title: "Upload workbook",
+    description: "Bring raw financial spreadsheets into the workspace and choose the current workbook.",
+    href: "/uploads",
+  },
+  {
+    title: "Build workbook index",
+    description: "Generate indexed sheet summaries, table summaries, row label candidates, and column profiles.",
+    href: "/workbook-index",
+  },
+  {
+    title: "Create or upload blueprint",
+    description: "Define report blueprint shells manually or upload DOCX/PDF blueprint files for review.",
+    href: "/blueprints",
+  },
+  {
+    title: "Run extraction",
+    description: "Create an extraction run for the selected workbook and blueprint, optionally using the latest workbook index.",
+    href: "/extraction",
+  },
+];
+
+function SelectionCard({
+  title,
+  value,
+}: {
+  title: string;
+  value: string | null | undefined;
+}) {
+  return (
+    <Card className="border-slate-200 bg-white/90">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm font-medium text-slate-900">{value ?? "Not selected"}</p>
+      </CardContent>
+    </Card>
+  );
+}
 
 export function DashboardPage() {
-  const { data: uploads = [] } = useQuery({
-    queryKey: ["uploads"],
-    queryFn: getUploads,
-  });
+  const currentUpload = useWorkspaceStore((state) => state.currentUpload);
+  const currentBlueprint = useWorkspaceStore((state) => state.currentBlueprint);
+  const currentIndexRun = useWorkspaceStore((state) => state.currentIndexRun);
+  const currentExtractionRun = useWorkspaceStore((state) => state.currentExtractionRun);
 
-  const { data: templates = [] } = useQuery({
-    queryKey: ["templates"],
-    queryFn: getTemplates,
-  });
-
-  const { data: reports = [] } = useQuery({
-    queryKey: ["reports"],
-    queryFn: getReports,
-  });
-
-  const failedValidations = reports.filter((r) => r.status === "failed").length;
-
-  const stats = [
-    {
-      label: "Uploaded Files",
-      value: uploads.length,
-      icon: Upload,
-      color: "text-blue-500",
-    },
-    {
-      label: "Templates",
-      value: templates.length,
-      icon: FileText,
-      color: "text-purple-500",
-    },
-    {
-      label: "Generated Reports",
-      value: reports.filter((r) => r.status === "generated").length,
-      icon: BookOpen,
-      color: "text-green-500",
-    },
-    {
-      label: "Failed / Issues",
-      value: failedValidations,
-      icon: ShieldCheck,
-      color: failedValidations > 0 ? "text-red-500" : "text-gray-400",
-    },
-  ];
+  const completedCount = [
+    currentUpload,
+    currentIndexRun,
+    currentBlueprint,
+    currentExtractionRun,
+  ].filter(Boolean).length;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500">Overview of your financial reporting activity.</p>
+      <Card className="overflow-hidden border-slate-200 bg-[linear-gradient(135deg,#0f172a_0%,#134e4a_100%)] text-white">
+        <CardContent className="grid gap-6 p-8 lg:grid-cols-[1.25fr_0.75fr]">
+          <div>
+            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-200">
+              Finance Operations Workflow
+            </div>
+            <h1 className="mt-3 max-w-3xl text-3xl font-semibold leading-tight">
+              Turn inconsistent financial spreadsheets into validated, report-ready outputs.
+            </h1>
+            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200">
+              Review detected workbook content, create blueprints, run AI-assisted extraction, and select the best evidence per field. The current backend supports candidate review workflows, not final automated report reconstruction.
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Badge variant="success" className="bg-emerald-300 text-slate-950">
+                AI-assisted
+              </Badge>
+              <Badge variant="info" className="bg-sky-300 text-slate-950">
+                Review required
+              </Badge>
+              <Badge variant="muted" className="bg-white/10 text-white">
+                Blueprint-driven extraction
+              </Badge>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+            <div className="text-sm font-medium text-slate-100">Workspace Progress</div>
+            <div className="mt-2 text-4xl font-semibold">{completedCount}/4</div>
+            <p className="mt-2 text-sm text-slate-300">
+              Current workspace selections determine which upload, blueprint, index run, and extraction run the review screens operate on.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button asChild className="bg-white text-slate-950 hover:bg-slate-100">
+                <Link to="/uploads">Start with uploads</Link>
+              </Button>
+              <Button asChild variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10">
+                <Link to="/extraction">Open extraction review</Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <SelectionCard title="Current Upload" value={currentUpload?.label} />
+        <SelectionCard title="Current Blueprint" value={currentBlueprint?.label} />
+        <SelectionCard title="Current Index Run" value={currentIndexRun?.label} />
+        <SelectionCard title="Current Extraction Run" value={currentExtractionRun?.label} />
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <Card key={s.label}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium text-gray-500 flex items-center gap-2">
-                <s.icon className={`h-4 w-4 ${s.color}`} />
-                {s.label}
+      <div className="grid gap-4 xl:grid-cols-2">
+        {workflowSteps.map((step, index) => (
+          <Card key={step.title} className="border-slate-200 bg-white/90">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between text-base text-slate-950">
+                <span>{index + 1}. {step.title}</span>
+                <Button asChild size="sm" variant="outline">
+                  <Link to={step.href}>Open</Link>
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-gray-900">{s.value}</p>
+              <p className="text-sm leading-6 text-slate-600">{step.description}</p>
             </CardContent>
           </Card>
         ))}
-      </div>
-
-      <div>
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">Quick Actions</h2>
-        <div className="flex flex-wrap gap-3">
-          <Button asChild>
-            <Link to="/uploads/new">
-              <Upload className="h-4 w-4 mr-2" />
-              Upload Excel
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/templates">
-              <FileText className="h-4 w-4 mr-2" />
-              Manage Templates
-            </Link>
-          </Button>
-          <Button variant="outline" asChild>
-            <Link to="/generate">
-              <BookOpen className="h-4 w-4 mr-2" />
-              Generate Report
-            </Link>
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Recent Uploads</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {uploads.length === 0 ? (
-              <p className="text-sm text-gray-400">No uploads yet.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {uploads.slice(0, 5).map((u) => (
-                  <li key={u.id}>
-                    <Link
-                      to={`/uploads/${u.id}`}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      {u.filename}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Recent Reports</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {reports.length === 0 ? (
-              <p className="text-sm text-gray-400">No reports yet.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {reports.slice(0, 5).map((r) => (
-                  <li key={r.id} className="text-sm text-gray-700">
-                    {r.name} <span className="text-xs text-gray-400">({r.status})</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getUpload } from "../api/uploads";
+import { getUpload, getUploadSheets } from "../api/uploads";
 import { getUploadTables, normalizeTable } from "../api/tables";
 import { suggestHeaderRow } from "../api/ai";
 import { extractErrorMessage } from "../api/client";
@@ -16,15 +16,12 @@ import { formatDateTime } from "../utils/formatDate";
 
 const statusVariant: Record<string, "default" | "success" | "warning" | "destructive" | "muted" | "info"> = {
   uploaded: "info",
-  parsing: "muted",
   parsed: "success",
-  error: "destructive",
-  duplicate: "warning",
+  failed: "destructive",
 };
 
 export function UploadDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const qc = useQueryClient();
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [opError, setOpError] = useState<string | null>(null);
@@ -33,6 +30,12 @@ export function UploadDetailPage() {
   const { data: upload, isLoading: loadingUpload, error: uploadError } = useQuery({
     queryKey: ["upload", id],
     queryFn: () => getUpload(id!),
+    enabled: !!id,
+  });
+
+  const { data: sheets = [], isLoading: loadingSheets } = useQuery({
+    queryKey: ["upload-sheets", id],
+    queryFn: () => getUploadSheets(id!),
     enabled: !!id,
   });
 
@@ -48,7 +51,7 @@ export function UploadDetailPage() {
       qc.invalidateQueries({ queryKey: ["tables", id] });
       setOpError(null);
     },
-    onError: (e) => setOpError(extractErrorMessage(e)),
+    onError: (error) => setOpError(extractErrorMessage(error)),
   });
 
   const aiMut = useMutation({
@@ -59,7 +62,7 @@ export function UploadDetailPage() {
         `AI suggests header row ${data.suggested_header_row} (confidence: ${(data.confidence * 100).toFixed(0)}%). Reasoning: ${data.reasoning}`
       );
     },
-    onError: (e) => setOpError(extractErrorMessage(e)),
+    onError: (error) => setOpError(extractErrorMessage(error)),
   });
 
   if (loadingUpload) {
@@ -83,7 +86,7 @@ export function UploadDetailPage() {
     <div className="space-y-6 max-w-4xl">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">{upload.filename}</h1>
+          <h1 className="text-xl font-bold text-gray-900">{upload.original_filename}</h1>
           <p className="text-sm text-gray-400 mt-0.5">{formatDateTime(upload.created_at)}</p>
         </div>
         <Badge variant={statusVariant[upload.status] ?? "muted"} className="text-sm">
@@ -91,14 +94,11 @@ export function UploadDetailPage() {
         </Badge>
       </div>
 
-      {upload.duplicate_of && (
+      {upload.is_duplicate && (
         <Alert variant="warning">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
-            This file appears to be a duplicate of upload{" "}
-            <Link to={`/uploads/${upload.duplicate_of}`} className="underline">
-              {upload.duplicate_of}
-            </Link>.
+            This file matches a previously uploaded workbook. You can still review and process it.
           </AlertDescription>
         </Alert>
       )}
@@ -121,7 +121,13 @@ export function UploadDetailPage() {
             <CardTitle className="text-sm">Detected Sheets</CardTitle>
           </CardHeader>
           <CardContent>
-            <SheetList sheets={upload.sheets ?? []} />
+            {loadingSheets ? (
+              <div className="flex items-center gap-2 text-gray-400">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading sheets...
+              </div>
+            ) : (
+              <SheetList sheets={sheets} />
+            )}
           </CardContent>
         </Card>
 
@@ -132,11 +138,11 @@ export function UploadDetailPage() {
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">Sheets</span>
-              <span>{upload.sheet_count}</span>
+              <span>{sheets.length}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Tables detected</span>
-              <span>{upload.table_count}</span>
+              <span>{tables.length}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Parse status</span>
@@ -169,10 +175,7 @@ export function UploadDetailPage() {
       </Card>
 
       <div className="flex flex-wrap gap-3">
-        <Button
-          variant="outline"
-          asChild
-        >
+        <Button variant="outline" asChild>
           <Link to={`/table-review/${id}`}>View Tables</Link>
         </Button>
 

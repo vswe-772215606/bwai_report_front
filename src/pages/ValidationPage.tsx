@@ -88,7 +88,7 @@ export function ValidationPage() {
               </SelectTrigger>
               <SelectContent>
                 {uploads.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>{u.filename}</SelectItem>
+                  <SelectItem key={u.id} value={u.id}>{u.original_filename}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

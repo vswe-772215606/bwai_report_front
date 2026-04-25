@@ -14,8 +14,7 @@ export interface RegisterRequest {
   password: string;
 }
 
-export interface AuthResponse {
+export interface TokenResponse {
   access_token: string;
-  token_type: string;
-  user: User;
+  token_type: "bearer" | string;
 }

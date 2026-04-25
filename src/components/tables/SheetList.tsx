@@ -20,11 +20,11 @@ export function SheetList({ sheets }: Props) {
         </TableRow>
       </TableHeader>
       <TableBody>
-        {sheets.map((s) => (
-          <TableRow key={s.sheet_name}>
-            <TableCell className="font-mono text-sm">{s.sheet_name}</TableCell>
-            <TableCell className="text-right text-sm">{s.row_count}</TableCell>
-            <TableCell className="text-right text-sm">{s.col_count}</TableCell>
+        {sheets.map((sheet) => (
+          <TableRow key={sheet.id}>
+            <TableCell className="font-mono text-sm">{sheet.sheet_name}</TableCell>
+            <TableCell className="text-right text-sm">{sheet.row_count}</TableCell>
+            <TableCell className="text-right text-sm">{sheet.column_count}</TableCell>
           </TableRow>
         ))}
       </TableBody>

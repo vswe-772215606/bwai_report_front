@@ -1,17 +1,31 @@
 import { apiClient } from "./client";
-import type { AuthResponse, LoginRequest, RegisterRequest, User } from "../types/auth";
+import type { LoginRequest, RegisterRequest, TokenResponse, User } from "../types/auth";
 
-export async function login(data: LoginRequest): Promise<AuthResponse> {
-  const res = await apiClient.post<AuthResponse>("/auth/login", data);
+interface UserResponse {
+  id: number;
+  email: string;
+  created_at: string;
+}
+
+function normalizeUser(user: UserResponse): User {
+  return {
+    id: String(user.id),
+    email: user.email,
+    created_at: user.created_at,
+  };
+}
+
+export async function login(data: LoginRequest): Promise<TokenResponse> {
+  const res = await apiClient.post<TokenResponse>("/auth/login", data);
   return res.data;
 }
 
-export async function register(data: RegisterRequest): Promise<AuthResponse> {
-  const res = await apiClient.post<AuthResponse>("/auth/register", data);
-  return res.data;
+export async function register(data: RegisterRequest): Promise<User> {
+  const res = await apiClient.post<UserResponse>("/auth/register", data);
+  return normalizeUser(res.data);
 }
 
 export async function getMe(): Promise<User> {
-  const res = await apiClient.get<User>("/auth/me");
-  return res.data;
+  const res = await apiClient.get<UserResponse>("/auth/me");
+  return normalizeUser(res.data);
 }

@@ -13,11 +13,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Loader2 } from "lucide-react";
 import type { RawTable } from "../types/table";
 
-const statusVariant: Record<string, "success" | "warning" | "destructive" | "muted" | "info"> = {
+const statusVariant: Record<string, "muted" | "info"> = {
   detected: "muted",
   header_confirmed: "info",
-  normalized: "success",
-  needs_review: "warning",
 };
 
 export function TableReviewPage() {
@@ -55,9 +53,8 @@ export function TableReviewPage() {
   const normalizeMut = useMutation({
     mutationFn: (tableId: string) => normalizeTable(tableId),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["tables", uploadId] });
       setOpError(null);
-      setOpSuccess("Table normalized successfully.");
+      setOpSuccess("Normalization finished for the current preview sample rows.");
     },
     onError: (e) => { setOpError(extractErrorMessage(e)); setOpSuccess(null); },
   });
@@ -112,7 +109,7 @@ export function TableReviewPage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <HeaderRowSelector
-                currentHeaderRow={selectedTable.confirmed_header_row ?? selectedTable.detected_header_row}
+                currentHeaderRow={selectedTable.detected_header_row ?? selectedTable.start_row}
                 onConfirm={(row) => confirmHeaderMut.mutate({ tableId: selectedTable.id, row })}
                 isLoading={confirmHeaderMut.isPending}
               />
@@ -121,7 +118,7 @@ export function TableReviewPage() {
                 <Button
                   size="sm"
                   onClick={() => normalizeMut.mutate(selectedTable.id)}
-                  disabled={normalizeMut.isPending || selectedTable.status === "normalized"}
+                  disabled={normalizeMut.isPending}
                 >
                   {normalizeMut.isPending ? "Normalizing..." : "Normalize Table"}
                 </Button>

@@ -2,60 +2,100 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard,
   Upload,
+  Rows3,
   FileText,
-  GitMerge,
-  ShieldCheck,
-  FilePlus2,
-  BookOpen,
+  SearchCheck,
   LogOut,
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useAuthStore } from "../../store/authStore";
+import { useWorkspaceStore } from "../../store/workspaceStore";
 
-const nav = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+const primaryNav = [
+  { to: "/dashboard", label: "Workspace", icon: LayoutDashboard },
   { to: "/uploads", label: "Uploads", icon: Upload },
-  { to: "/templates", label: "Templates", icon: FileText },
-  { to: "/mapping", label: "Mapping", icon: GitMerge },
-  { to: "/validation", label: "Validation", icon: ShieldCheck },
-  { to: "/generate", label: "Generate Report", icon: FilePlus2 },
-  { to: "/reports", label: "Reports", icon: BookOpen },
+  { to: "/workbook-index", label: "Workbook Index", icon: Rows3 },
+  { to: "/blueprints", label: "Blueprints", icon: FileText },
+  { to: "/extraction", label: "Extraction Review", icon: SearchCheck },
+];
+
+const legacyNav = [
+  { to: "/templates", label: "Legacy Templates" },
+  { to: "/mapping", label: "Legacy Mapping" },
+  { to: "/validation", label: "Legacy Validation" },
+  { to: "/generate", label: "Legacy Reports" },
+  { to: "/reports", label: "Report History" },
 ];
 
 export function Sidebar() {
-  const logout = useAuthStore((s) => s.logout);
+  const logout = useAuthStore((state) => state.logout);
+  const clearWorkspace = useWorkspaceStore((state) => state.clearWorkspace);
 
   return (
-    <aside className="flex flex-col w-56 min-h-screen bg-gray-900 text-gray-100 shrink-0">
-      <div className="px-4 py-5 border-b border-gray-700">
-        <span className="text-sm font-bold tracking-wide text-white">SQB Financial</span>
-        <p className="text-xs text-gray-400 mt-0.5">Report Builder</p>
+    <aside className="flex min-h-screen w-72 shrink-0 flex-col bg-slate-950 text-slate-100">
+      <div className="border-b border-slate-800 px-5 py-6">
+        <div className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-400">
+          Finance Ops Console
+        </div>
+        <div className="mt-2 text-lg font-semibold text-white">SQB Financial</div>
+        <p className="mt-2 text-sm leading-6 text-slate-400">
+          Upload raw workbooks, build a workbook index, review extraction candidates, and prepare report-ready outputs.
+        </p>
       </div>
 
-      <nav className="flex-1 py-3 space-y-0.5 px-2">
-        {nav.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors",
-                isActive
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-300 hover:bg-gray-800 hover:text-white"
-              )
-            }
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            {label}
-          </NavLink>
-        ))}
+      <nav className="flex-1 px-3 py-4">
+        <div className="space-y-1">
+          {primaryNav.map(({ to, label, icon: Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition-colors",
+                  isActive
+                    ? "bg-emerald-500 text-slate-950"
+                    : "text-slate-300 hover:bg-slate-900 hover:text-white"
+                )
+              }
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              {label}
+            </NavLink>
+          ))}
+        </div>
+
+        <div className="mt-8">
+          <div className="px-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">
+            Legacy Routes
+          </div>
+          <div className="mt-2 space-y-1">
+            {legacyNav.map(({ to, label }) => (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  cn(
+                    "block rounded-lg px-3 py-2 text-sm transition-colors",
+                    isActive
+                      ? "bg-slate-800 text-white"
+                      : "text-slate-400 hover:bg-slate-900 hover:text-slate-200"
+                  )
+                }
+              >
+                {label}
+              </NavLink>
+            ))}
+          </div>
+        </div>
       </nav>
 
-      <div className="px-2 py-3 border-t border-gray-700">
+      <div className="border-t border-slate-800 px-3 py-4">
         <button
-          onClick={logout}
-          className="flex items-center gap-2.5 w-full px-3 py-2 rounded-md text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors"
+          onClick={() => {
+            clearWorkspace();
+            logout();
+          }}
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-slate-300 transition-colors hover:bg-slate-900 hover:text-white"
         >
           <LogOut className="h-4 w-4" />
           Sign out

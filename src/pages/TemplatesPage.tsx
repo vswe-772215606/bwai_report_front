@@ -134,10 +134,10 @@ export function TemplatesPage() {
                   <SelectValue placeholder="Select type..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="income_statement">P&L / Income Statement</SelectItem>
+                  <SelectItem value="pnl">P&L / Income Statement</SelectItem>
                   <SelectItem value="cash_flow">Cash Flow Report</SelectItem>
                   <SelectItem value="balance_sheet">Balance Sheet</SelectItem>
-                  <SelectItem value="kpi_summary">Management KPI Summary</SelectItem>
+                  <SelectItem value="kpi">Management KPI Summary</SelectItem>
                 </SelectContent>
               </Select>
             </div>

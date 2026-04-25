@@ -5,10 +5,10 @@ import { Badge } from "../ui/badge";
 import { formatDate } from "../../utils/formatDate";
 
 const reportTypeLabel: Record<string, string> = {
-  income_statement: "P&L / Income Statement",
+  pnl: "P&L / Income Statement",
   cash_flow: "Cash Flow Report",
   balance_sheet: "Balance Sheet",
-  kpi_summary: "Management KPI Summary",
+  kpi: "Management KPI Summary",
 };
 
 interface Props {

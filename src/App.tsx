@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AppLayout } from "./components/layout/AppLayout";
 import { ProtectedRoute } from "./components/layout/ProtectedRoute";
@@ -16,6 +16,10 @@ import { MappingPage } from "./pages/MappingPage";
 import { ValidationPage } from "./pages/ValidationPage";
 import { GenerateReportPage } from "./pages/GenerateReportPage";
 import { ReportsPage } from "./pages/ReportsPage";
+import { WorkbookIndexPage } from "./pages/WorkbookIndexPage";
+import { BlueprintsPage } from "./pages/BlueprintsPage";
+import { BlueprintDetailPage } from "./pages/BlueprintDetailPage";
+import { ExtractionReviewPage } from "./pages/ExtractionReviewPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -43,10 +47,19 @@ function App() {
           >
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
+
             <Route path="/uploads" element={<UploadsListPage />} />
             <Route path="/uploads/new" element={<UploadExcelPage />} />
             <Route path="/uploads/:id" element={<UploadDetailPage />} />
             <Route path="/table-review/:id" element={<TableReviewPage />} />
+
+            <Route path="/workbook-index" element={<WorkbookIndexPage />} />
+
+            <Route path="/blueprints" element={<BlueprintsPage />} />
+            <Route path="/blueprints/:id" element={<BlueprintDetailPage />} />
+
+            <Route path="/extraction" element={<ExtractionReviewPage />} />
+
             <Route path="/templates" element={<TemplatesPage />} />
             <Route path="/templates/:id" element={<TemplateDetailPage />} />
             <Route path="/mapping" element={<MappingPage />} />

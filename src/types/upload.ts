@@ -1,28 +1,26 @@
 export type UploadStatus =
   | "uploaded"
-  | "parsing"
   | "parsed"
-  | "error"
-  | "duplicate";
+  | "failed";
 
 export interface WorkbookSheet {
+  id: string;
+  upload_id: string;
   sheet_name: string;
   row_count: number;
-  col_count: number;
+  column_count: number;
+  detected_language: string | null;
+  created_at: string;
 }
 
 export interface Upload {
   id: string;
-  filename: string;
-  file_size: number;
+  user_id: string;
+  original_filename: string;
+  file_hash: string;
   status: UploadStatus;
-  sheet_count: number;
-  table_count: number;
-  duplicate_of?: string;
+  is_duplicate: boolean;
   created_at: string;
-  updated_at: string;
 }
 
-export interface UploadDetail extends Upload {
-  sheets: WorkbookSheet[];
-}
+export type UploadDetail = Upload;

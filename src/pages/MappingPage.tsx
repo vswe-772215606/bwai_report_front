@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getUploads } from "../api/uploads";
 import { getUploadTables, getTablePreview } from "../api/tables";
@@ -13,12 +14,12 @@ import {
 } from "../components/mapping/MappingReviewTable";
 import { Button } from "../components/ui/button";
 import { Label } from "../components/ui/label";
-import { Alert, AlertDescription } from "../components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "../components/ui/select";
-import { Loader2, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, Sparkles, CheckCircle2, AlertCircle, AlertTriangle } from "lucide-react";
 import type { ColumnInfo } from "../types/table";
 
 export function MappingPage() {
@@ -55,9 +56,7 @@ export function MappingPage() {
   });
 
   useEffect(() => {
-    if (preview) {
-      setColumns(preview.headers);
-    }
+    if (preview) setColumns(preview.headers);
   }, [preview]);
 
   useEffect(() => {
@@ -66,6 +65,16 @@ export function MappingPage() {
     setAiRan(false);
     setConfirmed(false);
   }, [uploadId]);
+
+  useEffect(() => {
+    setRows([]);
+    setAiRan(false);
+    setConfirmed(false);
+    setOpError(null);
+  }, [templateId]);
+
+  const selectedTemplate = templates.find((t) => t.id === templateId) ?? null;
+  const templateHasNoFields = !!selectedTemplate && selectedTemplate.field_count === 0;
 
   const aiMut = useMutation({
     mutationFn: () =>
@@ -104,8 +113,12 @@ export function MappingPage() {
   });
 
   const missingRequired = rows.filter((r) => r.required && !r.source_column);
-  const lowConfidence = rows.filter((r) => !r.user_overridden && (r.ai_confidence ?? 1) < 0.75 && r.source_column);
+  const lowConfidence = rows.filter(
+    (r) => !r.user_overridden && (r.ai_confidence ?? 1) < 0.75 && r.source_column
+  );
   const canConfirm = aiRan && missingRequired.length === 0;
+  const canSuggest =
+    !!uploadId && !!tableId && !!templateId && !templateHasNoFields && !aiMut.isPending;
 
   return (
     <div className="space-y-5 max-w-6xl">
@@ -142,7 +155,7 @@ export function MappingPage() {
               </SelectTrigger>
               <SelectContent>
                 {uploads.map((u) => (
-                  <SelectItem key={u.id} value={u.id}>{u.filename}</SelectItem>
+                  <SelectItem key={u.id} value={u.id}>{u.original_filename}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -172,7 +185,10 @@ export function MappingPage() {
               </SelectTrigger>
               <SelectContent>
                 {templates.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.name}
+                    {t.field_count === 0 && " (no fields)"}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -180,11 +196,25 @@ export function MappingPage() {
         </CardContent>
       </Card>
 
+      {templateHasNoFields && selectedTemplate && (
+        <Alert variant="warning">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Template has no fields</AlertTitle>
+          <AlertDescription>
+            <span className="font-medium">{selectedTemplate.name}</span> has no fields defined.
+            AI mapping cannot run without fields.{" "}
+            <Link
+              to={`/templates/${selectedTemplate.id}`}
+              className="underline font-medium hover:text-yellow-900"
+            >
+              Open template to add fields →
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex items-center gap-3">
-        <Button
-          onClick={() => aiMut.mutate()}
-          disabled={!uploadId || !tableId || !templateId || aiMut.isPending}
-        >
+        <Button onClick={() => aiMut.mutate()} disabled={!canSuggest}>
           {aiMut.isPending ? (
             <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Running AI...</>
           ) : (

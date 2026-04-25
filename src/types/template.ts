@@ -1,8 +1,8 @@
 export type ReportType =
-  | "income_statement"
+  | "pnl"
   | "cash_flow"
   | "balance_sheet"
-  | "kpi_summary";
+  | "kpi";
 
 export type FieldDataType =
   | "currency"
