@@ -9,13 +9,11 @@ export function triggerBlobDownload(blob: Blob, filename: string): void {
   URL.revokeObjectURL(url);
 }
 
-export function getReportFilename(
-  reportName: string,
-  format: "pdf" | "docx"
-): string {
-  const slug = reportName
+export function buildDownloadFilename(baseName: string, extension: string): string {
+  const slug = baseName
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-  return `${slug}.${format}`;
+
+  return `${slug || "download"}.${extension}`;
 }

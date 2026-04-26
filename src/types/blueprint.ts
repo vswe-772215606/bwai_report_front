@@ -1,17 +1,18 @@
 import type { JsonValue } from "./common";
 
-export type ReportType = "pnl" | "cash_flow" | "balance_sheet" | "kpi";
-
-export type BlueprintSourceType = "manual" | "docx" | "pdf" | string;
+export type BlueprintSourceType = "manual" | "docx" | string;
 export type BlueprintStatus = string;
 
 export interface Blueprint {
   id: string;
   title: string;
-  report_type: ReportType | string | null;
+  document_domain: string | null;
+  document_type: string | null;
+  supports_batch_generation: boolean;
   status: BlueprintStatus | null;
   source_type: BlueprintSourceType | null;
   parse_error: string | null;
+  blueprint_json: JsonValue | null;
   created_at: string;
   updated_at?: string | null;
   user_id?: string | null;
@@ -32,7 +33,12 @@ export interface BlueprintField {
 
 export interface CreateBlueprintRequest {
   title: string;
-  report_type?: ReportType | string | null;
+  document_domain?: string | null;
+  document_type?: string | null;
+  supports_batch_generation?: boolean;
+  source_type?: BlueprintSourceType | null;
+  blueprint_json?: JsonValue | null;
+  fields?: CreateBlueprintFieldRequest[];
 }
 
 export interface CreateBlueprintFieldRequest {

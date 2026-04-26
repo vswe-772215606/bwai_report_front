@@ -11,10 +11,13 @@ interface BlueprintResponse {
   id: number;
   title?: string | null;
   name?: string | null;
-  report_type?: string | null;
+  document_domain?: string | null;
+  document_type?: string | null;
+  supports_batch_generation?: boolean | null;
   status?: string | null;
   source_type?: string | null;
   parse_error?: string | null;
+  blueprint_json?: JsonValue | null;
   created_at: string;
   updated_at?: string | null;
   user_id?: number | null;
@@ -37,10 +40,13 @@ function normalizeBlueprint(blueprint: BlueprintResponse): Blueprint {
   return {
     id: String(blueprint.id),
     title: blueprint.title ?? blueprint.name ?? `Blueprint ${blueprint.id}`,
-    report_type: blueprint.report_type ?? null,
+    document_domain: blueprint.document_domain ?? null,
+    document_type: blueprint.document_type ?? null,
+    supports_batch_generation: Boolean(blueprint.supports_batch_generation),
     status: blueprint.status ?? null,
     source_type: blueprint.source_type ?? null,
     parse_error: blueprint.parse_error ?? null,
+    blueprint_json: blueprint.blueprint_json ?? null,
     created_at: blueprint.created_at,
     updated_at: blueprint.updated_at ?? null,
     user_id: blueprint.user_id == null ? null : String(blueprint.user_id),
@@ -81,15 +87,6 @@ export async function uploadBlueprintDocx(file: File): Promise<Blueprint> {
   const form = new FormData();
   form.append("file", file);
   const res = await apiClient.post<BlueprintResponse>("/blueprints/upload-docx", form, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  return normalizeBlueprint(res.data);
-}
-
-export async function uploadBlueprintPdf(file: File): Promise<Blueprint> {
-  const form = new FormData();
-  form.append("file", file);
-  const res = await apiClient.post<BlueprintResponse>("/blueprints/upload-pdf", form, {
     headers: { "Content-Type": "multipart/form-data" },
   });
   return normalizeBlueprint(res.data);

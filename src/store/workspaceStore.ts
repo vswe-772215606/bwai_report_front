@@ -9,12 +9,12 @@ export interface WorkspaceReference {
 interface WorkspaceState {
   currentUpload: WorkspaceReference | null;
   currentBlueprint: WorkspaceReference | null;
-  currentIndexRun: WorkspaceReference | null;
-  currentExtractionRun: WorkspaceReference | null;
+  currentDocumentAiJob: WorkspaceReference | null;
+  currentBatchRun: WorkspaceReference | null;
   setCurrentUpload: (ref: WorkspaceReference | null) => void;
   setCurrentBlueprint: (ref: WorkspaceReference | null) => void;
-  setCurrentIndexRun: (ref: WorkspaceReference | null) => void;
-  setCurrentExtractionRun: (ref: WorkspaceReference | null) => void;
+  setCurrentDocumentAiJob: (ref: WorkspaceReference | null) => void;
+  setCurrentBatchRun: (ref: WorkspaceReference | null) => void;
   clearWorkspace: () => void;
 }
 
@@ -23,38 +23,35 @@ export const useWorkspaceStore = create<WorkspaceState>()(
     (set) => ({
       currentUpload: null,
       currentBlueprint: null,
-      currentIndexRun: null,
-      currentExtractionRun: null,
+      currentDocumentAiJob: null,
+      currentBatchRun: null,
 
       setCurrentUpload: (ref) =>
         set({
           currentUpload: ref,
-          currentIndexRun: null,
-          currentExtractionRun: null,
         }),
 
       setCurrentBlueprint: (ref) =>
         set({
           currentBlueprint: ref,
-          currentExtractionRun: null,
         }),
 
-      setCurrentIndexRun: (ref) =>
+      setCurrentDocumentAiJob: (ref) =>
         set({
-          currentIndexRun: ref,
+          currentDocumentAiJob: ref,
         }),
 
-      setCurrentExtractionRun: (ref) =>
+      setCurrentBatchRun: (ref) =>
         set({
-          currentExtractionRun: ref,
+          currentBatchRun: ref,
         }),
 
       clearWorkspace: () =>
         set({
           currentUpload: null,
           currentBlueprint: null,
-          currentIndexRun: null,
-          currentExtractionRun: null,
+          currentDocumentAiJob: null,
+          currentBatchRun: null,
         }),
     }),
     {

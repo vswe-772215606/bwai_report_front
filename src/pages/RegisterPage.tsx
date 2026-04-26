@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { register, login, getMe } from "../api/auth";
+import { Link, Navigate, useNavigate } from "react-router-dom";
+import { getMe, login, register } from "../api/auth";
 import { useAuthStore } from "../store/authStore";
 import { extractErrorMessage } from "../api/client";
+import { mapErrorToUzbek } from "../utils/errorMessages";
+import { Alert, AlertDescription } from "../components/ui/alert";
+import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Button } from "../components/ui/button";
-import { Alert, AlertDescription } from "../components/ui/alert";
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const token = useAuthStore((state) => state.token);
   const setSession = useAuthStore((state) => state.setSession);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,17 +19,21 @@ export function RegisterPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  if (token) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError(null);
 
     if (password !== confirm) {
-      setError("Passwords do not match.");
+      setError("Parollar mos kelmadi.");
       return;
     }
 
     if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+      setError("Parol kamida 8 ta belgidan iborat bo'lishi kerak.");
       return;
     }
 
@@ -35,36 +41,38 @@ export function RegisterPage() {
 
     try {
       await register({ email, password });
-      const token = await login({ email, password });
-      localStorage.setItem("access_token", token.access_token);
+      const tokenResponse = await login({ email, password });
+      localStorage.setItem("access_token", tokenResponse.access_token);
       const me = await getMe();
-      setSession(token.access_token, me);
+      setSession(tokenResponse.access_token, me);
       navigate("/dashboard");
     } catch (submissionError) {
-      setError(extractErrorMessage(submissionError));
+      setError(mapErrorToUzbek(extractErrorMessage(submissionError)));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#dbeafe_0%,#f8fafc_38%,#e2e8f0_100%)] px-4 py-10">
-      <div className="mx-auto flex min-h-[80vh] max-w-5xl overflow-hidden rounded-[28px] border border-white/60 bg-white/80 shadow-2xl backdrop-blur">
-        <div className="hidden w-1/2 flex-col justify-between bg-slate-950 p-10 text-slate-100 lg:flex">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#bfdbfe_0%,#f8fafc_38%,#e2e8f0_100%)] px-4 py-10">
+      <div className="mx-auto flex min-h-[80vh] max-w-6xl overflow-hidden rounded-[32px] border border-white/60 bg-white/85 shadow-2xl backdrop-blur">
+        <div className="hidden w-1/2 flex-col justify-between bg-[linear-gradient(160deg,#0f172a_0%,#1d4ed8_58%,#0f766e_100%)] p-10 text-slate-100 lg:flex">
           <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.32em] text-sky-300">
-              Report Workflow
+            <div className="text-xs font-semibold uppercase tracking-[0.32em] text-sky-200">
+              Yangi hisob
             </div>
             <h1 className="mt-5 text-4xl font-semibold leading-tight">
-              Create an account for workbook indexing, blueprint review, and extraction candidate selection.
+              Moliya va HR hujjatlarini avtomatlashtiring.
             </h1>
-            <p className="mt-5 max-w-md text-sm leading-7 text-slate-300">
-              This product is a financial report preparation workspace, not a chat assistant or general dashboard. The UI is optimized for reviewability and traceable evidence.
+            <p className="mt-5 max-w-md text-sm leading-7 text-slate-200">
+              Ro'yxatdan o'tgandan so'ng, Excel fayllar asosida hujjat yaratishni
+              darhol boshlashingiz mumkin.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5 text-sm leading-7 text-slate-300">
-            Turn inconsistent financial spreadsheets into validated, report-ready outputs. Review detected tables, confirm blueprints, run extraction, and inspect evidence with confidence.
+          <div className="rounded-2xl border border-white/10 bg-white/10 p-5 text-sm leading-7 text-slate-100">
+            Hujjat yaratish, avtomatik to'ldirish va natijalarni yuklab olish —
+            barchasi bir joyda.
           </div>
         </div>
 
@@ -72,11 +80,13 @@ export function RegisterPage() {
           <div className="w-full max-w-md">
             <div className="mb-8">
               <div className="text-xs font-semibold uppercase tracking-[0.26em] text-slate-500">
-                Register
+                Ro'yxatdan o'tish
               </div>
-              <h2 className="mt-2 text-3xl font-semibold text-slate-950">Create your account</h2>
+              <h2 className="mt-2 text-3xl font-semibold text-slate-950">
+                Yangi hisob yaratish
+              </h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Registration creates your account, then the app signs you in using the current backend auth flow.
+                Ma'lumotlaringizni kiriting va tizimga kiring.
               </p>
             </div>
 
@@ -88,7 +98,7 @@ export function RegisterPage() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Elektron pochta</Label>
                 <Input
                   id="email"
                   type="email"
@@ -100,7 +110,7 @@ export function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Parol</Label>
                 <Input
                   id="password"
                   type="password"
@@ -112,7 +122,7 @@ export function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="confirm">Confirm password</Label>
+                <Label htmlFor="confirm">Parolni tasdiqlang</Label>
                 <Input
                   id="confirm"
                   type="password"
@@ -123,15 +133,19 @@ export function RegisterPage() {
                 />
               </div>
 
-              <Button type="submit" className="w-full bg-sky-500 hover:bg-sky-400" disabled={loading}>
-                {loading ? "Creating account..." : "Create account"}
+              <Button
+                type="submit"
+                className="w-full bg-sky-500 hover:bg-sky-400"
+                disabled={loading}
+              >
+                {loading ? "Yuklanmoqda..." : "Ro'yxatdan o'tish"}
               </Button>
             </form>
 
             <p className="mt-6 text-sm text-slate-600">
-              Already registered?{" "}
+              Hisobingiz bormi?{" "}
               <Link to="/login" className="font-medium text-sky-700 hover:text-sky-600">
-                Sign in
+                Kirish
               </Link>
             </p>
           </div>

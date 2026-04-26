@@ -1,9 +1,9 @@
-import type { TablePreview } from "../../types/table";
+import type { UploadTablePreview } from "../../types/upload";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { Badge } from "../ui/badge";
 
 interface Props {
-  preview: TablePreview;
+  preview: UploadTablePreview;
 }
 
 export function DataPreviewTable({ preview }: Props) {

@@ -1,136 +1,278 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowRight, Download, FileSpreadsheet, Info, Loader2 } from "lucide-react";
+import { getBlueprints } from "../api/blueprints";
+import { downloadDocumentAiJob, getDocumentAiJobs } from "../api/documentAiJobs";
+import { downloadDocumentBatch, getDocumentBatches } from "../api/documentBatches";
+import { getUploads } from "../api/uploads";
+import { extractErrorMessage } from "../api/client";
+import { mapErrorToUzbek } from "../utils/errorMessages";
 import { Badge } from "../components/ui/badge";
-import { useWorkspaceStore } from "../store/workspaceStore";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { StatusBadge } from "../components/workflow/StatusBadge";
+import { triggerBlobDownload } from "../utils/fileDownload";
+import { formatDateTime } from "../utils/formatDate";
 
-const workflowSteps = [
-  {
-    title: "Upload workbook",
-    description: "Bring raw financial spreadsheets into the workspace and choose the current workbook.",
-    href: "/uploads",
-  },
-  {
-    title: "Build workbook index",
-    description: "Generate indexed sheet summaries, table summaries, row label candidates, and column profiles.",
-    href: "/workbook-index",
-  },
-  {
-    title: "Create or upload blueprint",
-    description: "Define report blueprint shells manually or upload DOCX/PDF blueprint files for review.",
-    href: "/blueprints",
-  },
-  {
-    title: "Run extraction",
-    description: "Create an extraction run for the selected workbook and blueprint, optionally using the latest workbook index.",
-    href: "/extraction",
-  },
-];
+type ActivityRow = {
+  id: string;
+  type: "batch" | "job";
+  typeLabel: string;
+  status: string;
+  generated_count: number | null;
+  created_at: string | null;
+  error_message: string | null;
+};
 
-function SelectionCard({
-  title,
-  value,
-}: {
-  title: string;
-  value: string | null | undefined;
-}) {
+function ErrorTooltip({ message }: { message: string }) {
   return (
-    <Card className="border-slate-200 bg-white/90">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm font-medium text-slate-900">{value ?? "Not selected"}</p>
-      </CardContent>
-    </Card>
+    <div className="group relative inline-flex items-center">
+      <Info className="h-3.5 w-3.5 cursor-help text-red-500" />
+      <div className="absolute bottom-full left-1/2 z-50 mb-2 hidden w-72 -translate-x-1/2 rounded-xl bg-slate-900 px-3 py-2 text-xs leading-5 text-white shadow-lg group-hover:block">
+        {message}
+      </div>
+    </div>
   );
 }
 
 export function DashboardPage() {
-  const currentUpload = useWorkspaceStore((state) => state.currentUpload);
-  const currentBlueprint = useWorkspaceStore((state) => state.currentBlueprint);
-  const currentIndexRun = useWorkspaceStore((state) => state.currentIndexRun);
-  const currentExtractionRun = useWorkspaceStore((state) => state.currentExtractionRun);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
 
-  const completedCount = [
-    currentUpload,
-    currentIndexRun,
-    currentBlueprint,
-    currentExtractionRun,
-  ].filter(Boolean).length;
+  const { data: uploads = [] } = useQuery({ queryKey: ["uploads"], queryFn: getUploads });
+  const { data: blueprints = [] } = useQuery({ queryKey: ["blueprints"], queryFn: getBlueprints });
+  const { data: batches = [] } = useQuery({ queryKey: ["document-batches"], queryFn: getDocumentBatches });
+  const { data: jobs = [] } = useQuery({ queryKey: ["document-ai-jobs"], queryFn: getDocumentAiJobs });
+
+  const totalGenerated = useMemo(() => {
+    const fromJobs = jobs.reduce((s, j) => s + (j.summary.generated_count ?? 0), 0);
+    const fromBatches = batches.reduce((s, b) => s + (b.summary.generated_count ?? 0), 0);
+    return fromJobs + fromBatches;
+  }, [jobs, batches]);
+
+  const hoursSaved = Math.round(totalGenerated * 0.5);
+
+  const activity = useMemo<ActivityRow[]>(() => {
+    const rows: ActivityRow[] = [
+      ...batches.map((b) => ({
+        id: b.id,
+        type: "batch" as const,
+        typeLabel: "Ommaviy yaratish",
+        status: b.status,
+        generated_count: b.summary.generated_count,
+        created_at: b.created_at,
+        error_message: b.error_message,
+      })),
+      ...jobs.map((j) => ({
+        id: j.id,
+        type: "job" as const,
+        typeLabel: "Avtomatik to'ldirish",
+        status: j.status,
+        generated_count: j.summary.generated_count,
+        created_at: j.created_at,
+        error_message: j.error_message,
+      })),
+    ];
+    return rows
+      .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())
+      .slice(0, 15);
+  }, [jobs, batches]);
+
+  const handleDownload = async (row: ActivityRow) => {
+    setDownloadingId(row.id);
+    setDownloadError(null);
+    try {
+      if (row.type === "batch") {
+        const { blob, filename } = await downloadDocumentBatch(row.id);
+        triggerBlobDownload(blob, filename ?? `hujjatlar-${row.id}.zip`);
+      } else {
+        const { blob, filename } = await downloadDocumentAiJob(row.id);
+        triggerBlobDownload(blob, filename ?? `hujjatlar-${row.id}.zip`);
+      }
+    } catch (err) {
+      setDownloadError(mapErrorToUzbek(extractErrorMessage(err)));
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <Card className="overflow-hidden border-slate-200 bg-[linear-gradient(135deg,#0f172a_0%,#134e4a_100%)] text-white">
-        <CardContent className="grid gap-6 p-8 lg:grid-cols-[1.25fr_0.75fr]">
-          <div>
-            <div className="text-xs font-semibold uppercase tracking-[0.28em] text-emerald-200">
-              Finance Operations Workflow
+      {/* Stat cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-slate-200 bg-white">
+          <CardContent className="pt-6">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Yaratilgan hujjatlar
             </div>
-            <h1 className="mt-3 max-w-3xl text-3xl font-semibold leading-tight">
-              Turn inconsistent financial spreadsheets into validated, report-ready outputs.
-            </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-200">
-              Review detected workbook content, create blueprints, run AI-assisted extraction, and select the best evidence per field. The current backend supports candidate review workflows, not final automated report reconstruction.
-            </p>
+            <div className="mt-2 text-4xl font-bold text-emerald-700">{totalGenerated}</div>
+            <div className="mt-1 text-sm text-slate-500">ta hujjat</div>
+          </CardContent>
+        </Card>
 
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Badge variant="success" className="bg-emerald-300 text-slate-950">
-                AI-assisted
-              </Badge>
-              <Badge variant="info" className="bg-sky-300 text-slate-950">
-                Review required
-              </Badge>
-              <Badge variant="muted" className="bg-white/10 text-white">
-                Blueprint-driven extraction
-              </Badge>
+        <Card className="border-slate-200 bg-white">
+          <CardContent className="pt-6">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Yuklangan ma'lumot fayllari
             </div>
-          </div>
+            <div className="mt-2 text-4xl font-bold text-sky-700">{uploads.length}</div>
+            <div className="mt-1 text-sm text-slate-500">ta fayl</div>
+          </CardContent>
+        </Card>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <div className="text-sm font-medium text-slate-100">Workspace Progress</div>
-            <div className="mt-2 text-4xl font-semibold">{completedCount}/4</div>
-            <p className="mt-2 text-sm text-slate-300">
-              Current workspace selections determine which upload, blueprint, index run, and extraction run the review screens operate on.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Button asChild className="bg-white text-slate-950 hover:bg-slate-100">
-                <Link to="/uploads">Start with uploads</Link>
-              </Button>
-              <Button asChild variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10">
-                <Link to="/extraction">Open extraction review</Link>
-              </Button>
+        <Card className="border-slate-200 bg-white">
+          <CardContent className="pt-6">
+            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Tejilgan vaqt
             </div>
-          </div>
+            <div className="mt-2 text-4xl font-bold text-amber-700">{hoursSaved}</div>
+            <div className="mt-1 text-sm text-slate-500">soat tejaldi</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Action cards */}
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="border-slate-200 bg-white">
+          <CardHeader>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
+              <FileSpreadsheet className="h-5 w-5 text-emerald-700" />
+            </div>
+            <CardTitle className="mt-3 text-lg text-slate-950">
+              Ma'lumotdan hujjat yaratish
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm leading-6 text-slate-600">
+              Excel fayl va Word shablonini yuklang. Har bir qator uchun alohida hujjat oling.
+            </p>
+            <Button asChild className="bg-emerald-500 text-slate-950 hover:bg-emerald-400">
+              <Link to="/controlled-batches">
+                Boshlash
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 bg-white">
+          <CardHeader>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-sky-100">
+              <FileSpreadsheet className="h-5 w-5 text-sky-700" />
+            </div>
+            <CardTitle className="mt-3 text-lg text-slate-950">
+              Hujjatni avtomatik to'ldirish
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm leading-6 text-slate-600">
+              Excel fayl va tayyor Word hujjatini yuklang. Sun'iy intellekt ma'lumotlarni
+              o'zi to'ldiradi.
+            </p>
+            <Button asChild className="bg-sky-500 hover:bg-sky-400">
+              <Link to="/document-ai-jobs">
+                Boshlash
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent activity table */}
+      <Card className="border-slate-200 bg-white">
+        <CardHeader>
+          <CardTitle className="text-base text-slate-950">So'nggi amallar</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {downloadError && (
+            <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {downloadError}
+            </div>
+          )}
+
+          {activity.length === 0 ? (
+            <p className="py-8 text-center text-sm text-slate-500">
+              Hali hech qanday amal bajarilmagan
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Tur
+                    </th>
+                    <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Holat
+                    </th>
+                    <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Hujjatlar
+                    </th>
+                    <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Sana
+                    </th>
+                    <th className="pb-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Yuklab olish
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activity.map((row) => {
+                    const isFailed =
+                      row.status.toLowerCase().includes("fail") ||
+                      row.status.toLowerCase().includes("error");
+
+                    return (
+                      <tr key={`${row.type}-${row.id}`} className="border-b border-slate-100 last:border-0">
+                        <td className="py-3 pr-4">
+                          <Badge variant={row.type === "batch" ? "success" : "info"}>
+                            {row.typeLabel}
+                          </Badge>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-1.5">
+                            <StatusBadge value={row.status} />
+                            {isFailed && row.error_message && (
+                              <ErrorTooltip
+                                message={mapErrorToUzbek(row.error_message)}
+                              />
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4 text-slate-900">
+                          {row.generated_count != null
+                            ? `${row.generated_count} ta hujjat`
+                            : "—"}
+                        </td>
+                        <td className="py-3 pr-4 text-slate-600">
+                          {formatDateTime(row.created_at)}
+                        </td>
+                        <td className="py-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={downloadingId === row.id}
+                            onClick={() => handleDownload(row)}
+                            title="ZIP arxivini yuklab olish"
+                          >
+                            {downloadingId === row.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Download className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
-
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <SelectionCard title="Current Upload" value={currentUpload?.label} />
-        <SelectionCard title="Current Blueprint" value={currentBlueprint?.label} />
-        <SelectionCard title="Current Index Run" value={currentIndexRun?.label} />
-        <SelectionCard title="Current Extraction Run" value={currentExtractionRun?.label} />
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        {workflowSteps.map((step, index) => (
-          <Card key={step.title} className="border-slate-200 bg-white/90">
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between text-base text-slate-950">
-                <span>{index + 1}. {step.title}</span>
-                <Button asChild size="sm" variant="outline">
-                  <Link to={step.href}>Open</Link>
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-6 text-slate-600">{step.description}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
     </div>
   );
 }

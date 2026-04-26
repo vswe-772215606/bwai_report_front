@@ -24,11 +24,11 @@ export function AppLayout() {
   }, [me, setUser]);
 
   return (
-    <div className="flex min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2f7_100%)]">
+    <div className="min-h-screen bg-[linear-gradient(180deg,#f7faf7_0%,#edf2f7_100%)] xl:flex">
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Header />
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-6 xl:p-8">
           <Outlet />
         </main>
       </div>

@@ -53,7 +53,7 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("access_token");
-      window.location.href = "/login";
+      window.location.href = "/login?expired=1";
     }
     return Promise.reject(error);
   }
@@ -94,18 +94,14 @@ export function normalizeApiError(error: unknown): NormalizedApiError {
     }
 
     if (detail && typeof detail === "object") {
-      return {
-        message:
-          detail.message ??
-          detail.error ??
-          data.message ??
-          data.error ??
-          error.message ??
-          "Request failed",
-        detail,
-        validationIssues: [],
-        status,
-      };
+      const base = detail.message ?? data.message ?? data.error ?? error.message;
+      const specific = detail.error;
+      const message =
+        base && specific
+          ? `${base}: ${specific}`
+          : base ?? specific ?? "Request failed";
+
+      return { message, detail, validationIssues: [], status };
     }
 
     return {
